@@ -99,7 +99,7 @@ function AgendaView(element, calendar, viewName) {
 	var slotTableFirstInner;
 	var axisFirstCells;
 	var gutterCells;
-	var selectionHelper;
+	var selectionHelpers;
 	
 	var viewWidth;
 	var viewHeight;
@@ -715,48 +715,49 @@ function AgendaView(element, calendar, viewName) {
 	
 	function renderSlotSelection(startDate, endDate) {
 		var helperOption = opt('selectHelper');
+		var selectionHelper;
 		coordinateGrid.build();
 		if (helperOption) {
 			var col = dayDiff(startDate, t.visStart) * dis + dit;
-			if (col >= 0 && col < colCnt) { // only works when times are on same day
-				var rect = coordinateGrid.rect(0, col, 0, col, slotContent); // only for horizontal coords
-				var top = timePosition(startDate, startDate);
-				var bottom = timePosition(startDate, endDate);
-				if (bottom > top) { // protect against selections that are entirely before or after visible range
-					rect.top = top;
-					rect.height = bottom - top;
-					rect.left += 2;
-					rect.width -= 5;
-					if ($.isFunction(helperOption)) {
-						var helperRes = helperOption(startDate, endDate);
-						if (helperRes) {
-							rect.position = 'absolute';
-							rect.zIndex = 8;
-							selectionHelper = $(helperRes)
-								.css(rect)
-								.appendTo(slotContent);
-						}
-					}else{
-						rect.isStart = true; // conside rect a "seg" now
-						rect.isEnd = true;   //
-						selectionHelper = $(slotSegHtml(
-							{
-								title: '',
-								start: startDate,
-								end: endDate,
-								className: ['fc-select-helper'],
-								editable: false
-							},
-							rect
-						));
-						selectionHelper.css('opacity', opt('dragOpacity'));
+			var rect = coordinateGrid.rect(0, col, 0, col, slotContent); // only for horizontal coords
+			var top = timePosition(startDate, startDate);
+			var bottom = timePosition(startDate, endDate);
+			if (bottom > top) { // protect against selections that are entirely before or after visible range
+				rect.top = top;
+				rect.height = bottom - top;
+				rect.left += 2;
+				rect.width -= 5;
+				if ($.isFunction(helperOption)) {
+					var helperRes = helperOption(startDate, endDate);
+					if (helperRes) {
+						rect.position = 'absolute';
+						rect.zIndex = 8;
+						selectionHelper = $(helperRes)
+							.css(rect)
+							.appendTo(slotContent);
+						selectionHelpers.push(selectionHelper);
 					}
-					if (selectionHelper) {
-						slotBind(selectionHelper);
-						slotContent.append(selectionHelper);
-						setOuterWidth(selectionHelper, rect.width, true); // needs to be after appended
-						setOuterHeight(selectionHelper, rect.height, true);
-					}
+				}else{
+					rect.isStart = true; // conside rect a "seg" now
+					rect.isEnd = true;   //
+					selectionHelper = $(slotSegHtml(
+						{
+							title: '',
+							start: startDate,
+							end: endDate,
+							className: ['fc-select-helper'],
+							editable: false
+						},
+						rect
+					));
+					selectionHelper.css('opacity', opt('dragOpacity'));
+					selectionHelpers.push(selectionHelper);
+				}
+				if (selectionHelper) {
+					slotBind(selectionHelper);
+					slotContent.append(selectionHelper);
+					setOuterWidth(selectionHelper, rect.width, true); // needs to be after appended
+					setOuterHeight(selectionHelper, rect.height, true);
 				}
 			}
 		}else{
@@ -767,9 +768,10 @@ function AgendaView(element, calendar, viewName) {
 	
 	function clearSelection() {
 		clearOverlays();
-		if (selectionHelper) {
-			selectionHelper.remove();
-			selectionHelper = null;
+		selectionHelpers = selectionHelpers || [];
+		for (var i = 0; i < selectionHelpers.length; i++) {
+			selectionHelpers[i] && selectionHelpers[i].remove();
+			delete selectionHelpers[i];
 		}
 	}
 	
@@ -780,27 +782,36 @@ function AgendaView(element, calendar, viewName) {
 			var dates;
 			hoverListener.start(function(cell, origCell) {
 				clearSelection();
-				if (cell && cell.col == origCell.col && !cellIsAllDay(cell)) {
-					var d1 = cellDate(origCell);
-					var d2 = cellDate(cell);
-					dates = [
+				dates = [];
+				if (cell.col < origCell.col) {
+					var temp = cell;
+					cell = origCell;
+					origCell = temp;
+				}
+				for (var col = origCell.col; col <= cell.col; col++) {
+					var curOrigCell = { row : origCell.row, col : col };
+					var curCell = { row : cell.row, col : col };
+					var d1 = cellDate(curOrigCell);
+					var d2 = cellDate(curCell);
+					var curDates = [
 						d1,
 						addMinutes(cloneDate(d1), snapMinutes), // calculate minutes depending on selection slot minutes 
 						d2,
 						addMinutes(cloneDate(d2), snapMinutes)
-					].sort(cmp);
-					renderSlotSelection(dates[0], dates[3]);
-				}else{
-					dates = null;
+					].sort(cmp)
+					dates.push(curDates);
+					renderSlotSelection(curDates[0], curDates[3]);
 				}
 			}, ev);
 			$(document).one('mouseup', function(ev) {
 				hoverListener.stop();
-				if (dates) {
-					if (+dates[0] == +dates[1]) {
-						reportDayClick(dates[0], false, ev);
+				for (var i = 0; i < dates.length; i++) {
+					if (dates[i]) {
+						if (+dates[i][0] == +dates[i][1]) {
+							reportDayClick(dates[i][0], false, ev);
+						}
+						reportSelection(dates[i][0], dates[i][3], false, ev);
 					}
-					reportSelection(dates[0], dates[3], false, ev);
 				}
 			});
 		}
