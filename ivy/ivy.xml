@@ -10,8 +10,8 @@
         <conf name="default" extends="dev"/>
     </configurations>
     <publications>
-        <artifact name="jquery.dataTables" type="javascript" ext="js" conf="dev,test,default"/>
-        <artifact name="jquery.dataTables" type="stylesheet" ext="css" conf="dev,test,default"/>
+        <artifact name="fullcalendar" type="javascript" ext="js" conf="dev,test,default"/>
+        <artifact name="fullcalendar" type="stylesheet" ext="css" conf="dev,test,default"/>
     </publications>
     <dependencies>
         
