@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<project name="datatables" default="package" basedir=".">  
+<project name="fullcalendar" default="package" basedir=".">  
 
     <property name="dist.dir" value="dist"/>
 
