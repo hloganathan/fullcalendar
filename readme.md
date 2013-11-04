@@ -1,3 +1,8 @@
+Attention developers who are editing the cbeyond/fullcalendar fork!
+
+If you make any changes to this fork, you must run `grunt dev` in order to update the build/out/fullcalendar.js and build/out/fullcalendar.css files that this project exports.
+
+Thank you, and carry on.
 
 FullCalendar - Full-sized drag & drop event calendar
 ====================================================
